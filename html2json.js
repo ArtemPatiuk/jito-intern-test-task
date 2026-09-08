@@ -10,10 +10,91 @@ function convertHtml2JsonAndSet() {
   You can rewrite it completely, just be sure it accepts htmlText as string and outputs json object.
 */
 function html2json(htmlText) {
-  return {
-    "Conversion results": "should be instead of this json obj",
-    "Just to show that it is dynamic value (input length)": htmlText.length,
+  const tokens = tokenize(htmlText);
+
+  // console.log(tokens);
+
+  return tokens;
+}
+
+function tokenize(htmlText) {
+  const tokens = [];
+
+  const tagStart = /<(?=[a-z!\/])/gi;
+
+  let match;
+
+  while ((match = tagStart.exec(htmlText)) !== null) {
+    const start = match.index;
+
+    const end = findTagEnd(htmlText, start);
+
+
+    if (end === -1) {
+      break;
+    }
+
+    const raw = htmlText.slice(start, end + 1);
+
+    tokens.push(parseTag(raw));
+
+    tagStart.lastIndex = end + 1;
+  }
+
+  return tokens;
+}
+
+function findTagEnd(htmlText, start) {
+  let quote = null;
+
+  for (let i = start + 1; i < htmlText.length; i++) {
+    const char = htmlText[i];
+    console.log("char = ", char)
+    if (quote !== null) {
+      if (char === quote) {
+        quote = null;
+      }
+
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+
+    if (char === ">") {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+function parseTag(raw) {
+  const result = {
+    type: "unknown",
+    raw,
   };
+
+  if (raw.startsWith("</")) {
+    result.type = "close";
+    return result;
+  }
+
+  if (raw.startsWith("<!")) {
+    if (/^<!doctype\b/i.test(raw)) {
+      result.type = "doctype";
+    } else if (/^<!--[\s\S]*?-->/.test(raw)) {
+      result.type = "comment";
+    }
+
+    return result;
+  }
+
+  result.type = "open";
+
+  return result;
 }
 
 function showExample1() {
@@ -62,15 +143,10 @@ function showExample1() {
 
   document.getElementById("html").value = htmlExample;
   document.getElementById("json").textContent = JSON.stringify(
-    htmlExample ,
+    jsonContent,
     null,
     2
   );
-  // document.getElementById("json").textContent = JSON.stringify(
-  //   jsonContent,
-  //   null,
-  //   2
-  // );
 }
 
 function showExample2() {
