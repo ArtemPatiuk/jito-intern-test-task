@@ -10,6 +10,7 @@ function convertHtml2JsonAndSet() {
   You can rewrite it completely, just be sure it accepts htmlText as string and outputs json object.
 */
 const voidElements = ["img", 'br', "hr", 'input', 'meta', 'area', 'col', 'embed', 'link', 'source', 'track', 'wbr'];
+const rawTextTag = ["script", "style", "textarea", "title"];
 function html2json(htmlText) {
   const res = stack(htmlText)
   //const tokens = tokenize(htmlText);
@@ -22,20 +23,29 @@ function tokenize(htmlText) {
   const tagStart = /<(?=[a-z!\/])/gi;
 
   let match;
+  let lastEnd = 0;
 
   while ((match = tagStart.exec(htmlText)) !== null) {
     const start = match.index;
-
     const end = findTagEnd(htmlText, start);
-
-
     if (end === -1) {
       break;
     }
+    const text = htmlText.slice(lastEnd, start);
+
+
 
     const raw = htmlText.slice(start, end + 1);
+    const parsedRaw = parseTag(raw)
 
-    tokens.push(parseTag(raw));
+    if (text && text.trim() !== "") {
+      tokens.push({
+        type: "text",
+        value: text
+      });
+    }
+    tokens.push(parsedRaw);
+    lastEnd = end + 1
 
     tagStart.lastIndex = end + 1;
   }
@@ -44,27 +54,47 @@ function tokenize(htmlText) {
 }
 function stack(htmlText) {
   const tokens = tokenize(htmlText);
+  console.log(tokens)
   const stack = [];
   const res = [];
   for (const token of tokens) {
-    if (token.type !== 'unknown') {
-      if (token.type !== 'close') {
-        const node = {
-          type: token.type,
-          name: token.name,
-          attributes:token.attributes,
-          children: []
-        }
-        if (stack.length > 0) {
-          stack[stack.length - 1].children.push(node)
-        } else {
-          res.push(node)
-        };
-        if (token.type !== 'void element') {
-          stack.push(node)
-        }
-      } else {
+
+    if (token.type === 'unknown') {
+      continue;
+    }
+    if (token.type === 'close') {
+      if (stack.length > 0 && stack[stack.length - 1].name === token.name) {
         stack.pop();
+      }
+      continue;
+    }
+    if (token.type === 'text') {
+      const node = {
+        type: "text",
+        value: token.value
+      }
+
+      if (stack.length > 0) {
+        stack[stack.length - 1].children.push(node)
+      } else {
+        res.push(node)
+      }
+      continue
+    }
+
+    if (token.type === 'open' || token.type === 'void element') {
+      const node = {
+        name: token.name,
+        attributes: token.attributes,
+        children: []
+      }
+      if (stack.length > 0) {
+        stack[stack.length - 1].children.push(node)
+      } else {
+        res.push(node)
+      }
+      if (token.type === 'open') {
+        stack.push(node);
       }
     }
   }
@@ -96,7 +126,6 @@ function findTagEnd(htmlText, start) {
 
   return -1;
 }
-
 function parseTag(raw) {
   const result = {
     type: "unknown",
@@ -117,29 +146,31 @@ function parseTag(raw) {
 
     return result;
   }
-  const regex = /([^<]+)|<(\/?[a-zA-Z0-9]+)([^>]*)/i
+  const regex = /^<\/?([a-zA-Z0-9-]+)(?:\s+([\s\S]+))?>$/i
   const tagMatch = regex.exec(raw)
   if (!tagMatch) {
     return result;
   }
-  const nameOfTag = tagMatch[2]
-  const attr = (tagMatch[3] || "").trim()
+  const nameOfTag = tagMatch[1]
+  const normalizedName = nameOfTag.toLowerCase();
 
+  const attr = (tagMatch[2] || "").trim()
   if (raw.startsWith("</")) {
     result.type = "close";
-    result.name = nameOfTag.replace("/", '')
+    result.name = normalizedName.replace("/", '')
     return result;
   }
 
-  const normalizedName = nameOfTag.toLowerCase();
+
 
   result.name = normalizedName
-
+  result.attributes = attr;
   if (voidElements.includes(normalizedName)) {
     result.type = "void element"
+  } else if (rawTextTag.includes(normalizedName)) {
+    result.type = "unformatted text"
   } else {
     result.type = "open";
-    result.attributes = attr;
   }
 
 
