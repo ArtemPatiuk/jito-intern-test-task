@@ -11,11 +11,9 @@ function convertHtml2JsonAndSet() {
 */
 const voidElements = ["img", 'br', "hr", 'input', 'meta', 'area', 'col', 'embed', 'link', 'source', 'track', 'wbr'];
 function html2json(htmlText) {
-  const tokens = tokenize(htmlText);
-
-  // console.log(tokens);
-
-  return tokens;
+  const res = stack(htmlText)
+  //const tokens = tokenize(htmlText);
+  return res;
 }
 
 function tokenize(htmlText) {
@@ -43,6 +41,34 @@ function tokenize(htmlText) {
   }
 
   return tokens;
+}
+function stack(htmlText) {
+  const tokens = tokenize(htmlText);
+  const stack = [];
+  const res = [];
+  for (const token of tokens) {
+    if (token.type !== 'unknown') {
+      if (token.type !== 'close') {
+        const node = {
+          type: token.type,
+          name: token.name,
+          attributes:token.attributes,
+          children: []
+        }
+        if (stack.length > 0) {
+          stack[stack.length - 1].children.push(node)
+        } else {
+          res.push(node)
+        };
+        if (token.type !== 'void element') {
+          stack.push(node)
+        }
+      } else {
+        stack.pop();
+      }
+    }
+  }
+  return res;
 }
 
 function findTagEnd(htmlText, start) {
@@ -75,7 +101,6 @@ function parseTag(raw) {
   const result = {
     type: "unknown",
     name: "",
-    attributes: ""
   };
   if (!raw) {
     return result;
@@ -109,59 +134,17 @@ function parseTag(raw) {
   const normalizedName = nameOfTag.toLowerCase();
 
   result.name = normalizedName
-  result.attributes = attr;
+
   if (voidElements.includes(normalizedName)) {
     result.type = "void element"
   } else {
     result.type = "open";
+    result.attributes = attr;
   }
 
 
   return result;
 }
-const tests = [
-  '<div>',
-  '</div>',
-  '<div class="container" id="main">',
-  '<p class="text">',
-
-  '<img src="image.jpg">',
-  '<br>',
-  '<input type="text">',
-
-  '<!-- comment -->',
-  '<!DOCTYPE html>',
-
-  '<IMG src="image.jpg">',
-  '<DIV class="test">',
-
-  '<div>',
-  '</div>',
-
-  '<',
-  '<div',
-  '<<<'
-];
-
-for (const input of tests) {
-  try {
-    console.log(`\nINPUT: ${input}`);
-    console.log(parseTag(input));
-  } catch (error) {
-    console.error(`CRASH: ${input}`);
-    console.error(error.message);
-  }
-}
-// const result = {
-//   type: "unknown",
-//   name:"",: nameOfTag
-//   attributes: attr.trim() || ""
-// };
-{/* <div class="container">
-    <p class="text">Hello</p>
-    <img src="test.jpg">
-</div> */}
-
 function showExample1() {
   const htmlExample = `<!DOCTYPE html>
 <html lang="en">
