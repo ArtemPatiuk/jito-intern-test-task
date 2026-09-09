@@ -9,6 +9,7 @@ function convertHtml2JsonAndSet() {
   Update this function to convert html into json object.
   You can rewrite it completely, just be sure it accepts htmlText as string and outputs json object.
 */
+const voidElements = ["img", 'br', "hr", 'input', 'meta', 'area', 'col', 'embed', 'link', 'source', 'track', 'wbr'];
 function html2json(htmlText) {
   const tokens = tokenize(htmlText);
 
@@ -71,7 +72,6 @@ function findTagEnd(htmlText, start) {
 }
 
 function parseTag(raw) {
-  //const TagName = /\s*([a-zA-Z0-9]+)/i
   const result = {
     type: "unknown",
     name: "",
@@ -94,16 +94,18 @@ function parseTag(raw) {
   }
   const regex = /([^<]+)|<(\/?[a-zA-Z0-9]+)([^>]*)/i
   const tagMatch = regex.exec(raw)
+  if (!tagMatch) {
+    return result;
+  }
   const nameOfTag = tagMatch[2]
   const attr = (tagMatch[3] || "").trim()
-
 
   if (raw.startsWith("</")) {
     result.type = "close";
     result.name = nameOfTag.replace("/", '')
     return result;
   }
-  const voidElements = ["img", 'br', "hr", 'input', 'meta', 'area', 'col', 'embed', 'link', 'source', 'track', 'wbr'];
+
   const normalizedName = nameOfTag.toLowerCase();
 
   result.name = normalizedName
@@ -114,9 +116,42 @@ function parseTag(raw) {
     result.type = "open";
   }
 
+
   return result;
 }
+const tests = [
+  '<div>',
+  '</div>',
+  '<div class="container" id="main">',
+  '<p class="text">',
 
+  '<img src="image.jpg">',
+  '<br>',
+  '<input type="text">',
+
+  '<!-- comment -->',
+  '<!DOCTYPE html>',
+
+  '<IMG src="image.jpg">',
+  '<DIV class="test">',
+
+  '<div>',
+  '</div>',
+
+  '<',
+  '<div',
+  '<<<'
+];
+
+for (const input of tests) {
+  try {
+    console.log(`\nINPUT: ${input}`);
+    console.log(parseTag(input));
+  } catch (error) {
+    console.error(`CRASH: ${input}`);
+    console.error(error.message);
+  }
+}
 // const result = {
 //   type: "unknown",
 //   name:"",: nameOfTag
