@@ -49,7 +49,6 @@ function findTagEnd(htmlText, start) {
 
   for (let i = start + 1; i < htmlText.length; i++) {
     const char = htmlText[i];
-    console.log("char = ", char)
     if (quote !== null) {
       if (char === quote) {
         quote = null;
@@ -72,30 +71,61 @@ function findTagEnd(htmlText, start) {
 }
 
 function parseTag(raw) {
+  //const TagName = /\s*([a-zA-Z0-9]+)/i
   const result = {
     type: "unknown",
-    raw,
+    name: "",
+    attributes: ""
   };
-
-  if (raw.startsWith("</")) {
-    result.type = "close";
+  if (!raw) {
     return result;
   }
 
   if (raw.startsWith("<!")) {
     if (/^<!doctype\b/i.test(raw)) {
       result.type = "doctype";
+      result.name = "doctype";
     } else if (/^<!--[\s\S]*?-->/.test(raw)) {
       result.type = "comment";
+      result.name = "comment"
     }
 
     return result;
   }
+  const regex = /([^<]+)|<(\/?[a-zA-Z0-9]+)([^>]*)/i
+  const tagMatch = regex.exec(raw)
+  const nameOfTag = tagMatch[2]
+  const attr = (tagMatch[3] || "").trim()
 
-  result.type = "open";
+
+  if (raw.startsWith("</")) {
+    result.type = "close";
+    result.name = nameOfTag.replace("/", '')
+    return result;
+  }
+  const voidElements = ["img", 'br', "hr", 'input', 'meta', 'area', 'col', 'embed', 'link', 'source', 'track', 'wbr'];
+  const normalizedName = nameOfTag.toLowerCase();
+
+  result.name = normalizedName
+  result.attributes = attr;
+  if (voidElements.includes(normalizedName)) {
+    result.type = "void element"
+  } else {
+    result.type = "open";
+  }
 
   return result;
 }
+
+// const result = {
+//   type: "unknown",
+//   name:"",: nameOfTag
+//   attributes: attr.trim() || ""
+// };
+{/* <div class="container">
+    <p class="text">Hello</p>
+    <img src="test.jpg">
+</div> */}
 
 function showExample1() {
   const htmlExample = `<!DOCTYPE html>
