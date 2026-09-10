@@ -10,7 +10,7 @@ function convertHtml2JsonAndSet() {
   You can rewrite it completely, just be sure it accepts htmlText as string and outputs json object.
 */
 const voidElements = ["img", 'br', "hr", 'input', 'meta', 'area', 'col', 'embed', 'link', 'source', 'track', 'wbr'];
-const rawTextTag = ["script", "style", "textarea", "title"];
+const rawTextTags = ["script", "style", "textarea", "title"];
 function html2json(htmlText) {
   const res = stack(htmlText)
   //const tokens = tokenize(htmlText);
@@ -33,20 +33,59 @@ function tokenize(htmlText) {
     }
     const text = htmlText.slice(lastEnd, start);
 
-
-
-    const raw = htmlText.slice(start, end + 1);
-    const parsedRaw = parseTag(raw)
-
     if (text && text.trim() !== "") {
       tokens.push({
         type: "text",
         value: text
       });
     }
-    tokens.push(parsedRaw);
-    lastEnd = end + 1
 
+    const raw = htmlText.slice(start, end + 1);
+    const parsedRaw = parseTag(raw)
+    tokens.push(parsedRaw);
+
+    if (
+      parsedRaw.type === "open" &&
+      rawTextTags.includes(parsedRaw.name)
+    ) {
+      const indexOfStartContent = end + 1;
+      const indexOfStartCloseTag = findRawTextEnd(htmlText, indexOfStartContent, parsedRaw.name);
+
+      if (indexOfStartCloseTag === -1) {
+        const content = htmlText.slice(indexOfStartContent);
+        if (content.trim() !== "") {
+          tokens.push({
+            type: "text",
+            value: content
+          });
+        }
+        lastEnd = htmlText.length;
+        tagStart.lastIndex = htmlText.length;
+        break;
+      }
+      const content = htmlText.slice(indexOfStartContent, indexOfStartCloseTag);
+      if (content.trim() !== "") {
+        tokens.push({
+          type: "text",
+          value: content
+        });
+      }
+      tokens.push({
+        type: "close",
+        name: parsedRaw.name
+      });
+      const closeEnd = findTagEnd(htmlText, indexOfStartCloseTag);
+      if (closeEnd === -1) {
+        break;
+      }
+      lastEnd = closeEnd + 1;
+      tagStart.lastIndex = closeEnd + 1;
+
+      continue;
+    }
+
+
+    lastEnd = end + 1;
     tagStart.lastIndex = end + 1;
   }
 
@@ -54,7 +93,6 @@ function tokenize(htmlText) {
 }
 function stack(htmlText) {
   const tokens = tokenize(htmlText);
-  console.log(tokens)
   const stack = [];
   const res = [];
   for (const token of tokens) {
@@ -100,7 +138,17 @@ function stack(htmlText) {
   }
   return res;
 }
+function findRawTextEnd(htmlText, contentStart, tagName) {
+  const regex = new RegExp(`<\\/\\s*${tagName}\\s*>`, "i");
 
+  const match = regex.exec(htmlText.slice(contentStart));
+
+  if (!match) {
+    return -1;
+  }
+
+  return contentStart + match.index;
+}
 function findTagEnd(htmlText, start) {
   let quote = null;
 
@@ -156,24 +204,18 @@ function parseTag(raw) {
 
   const attr = (tagMatch[2] || "").trim()
   if (raw.startsWith("</")) {
-    result.type = "close";
     result.name = normalizedName.replace("/", '')
+    result.type = "close";
     return result;
   }
-
-
 
   result.name = normalizedName
   result.attributes = attr;
   if (voidElements.includes(normalizedName)) {
     result.type = "void element"
-  } else if (rawTextTag.includes(normalizedName)) {
-    result.type = "unformatted text"
   } else {
     result.type = "open";
   }
-
-
   return result;
 }
 function showExample1() {
