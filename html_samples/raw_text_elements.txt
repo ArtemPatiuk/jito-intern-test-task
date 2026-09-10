@@ -1,0 +1,31 @@
+<div>
+  <style>
+    .a > .b { content: "<p>" }
+  </style>
+  <p>Hello</p>
+</div>
+
+<div>
+  <script>123 <div> 456</script>
+  <p>Hello</p>
+</div>
+
+<script>
+  const x = "<div><p>Hello</p></div>";
+</script>
+
+<style>
+  .foo::before {
+    content: "<div>";
+  }
+</style>
+
+<textarea>
+  <div>Hello</div>
+</textarea>
+
+<title>
+  <b>Hello</b>
+</title>
+
+'<script>const x = "<div>Hello</div>";</script><div>World</div>'

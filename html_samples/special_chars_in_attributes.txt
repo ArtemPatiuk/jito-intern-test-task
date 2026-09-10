@@ -1,0 +1,10 @@
+<div title="1 > 0"></div>
+<div title='1 > 0'></div>
+
+<div class="foo" title="hello > world"><p title></div>
+
+<div title="1 > 0">
+<div title='1 > 0'>
+<div class="foo" title="hello > world"><p title></div>
+<div data-value="<something>">
+<div title="Use < and > characters">

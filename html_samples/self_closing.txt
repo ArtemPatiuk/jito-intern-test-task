@@ -1,0 +1,12 @@
+<br>
+<img src="x">
+<input>
+<meta>
+<link>
+<hr>
+<div><img src="google.com"><p>Hello</p></div>
+'<div><img src="google.com"><p>Hello</p></div>'
+<div>
+  <img>
+  <p>Hello</p>
+</div>

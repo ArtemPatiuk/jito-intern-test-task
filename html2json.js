@@ -13,7 +13,6 @@ const voidElements = ["img", 'br', "hr", 'input', 'meta', 'area', 'col', 'embed'
 const rawTextTags = ["script", "style", "textarea", "title"];
 function html2json(htmlText) {
   const res = stack(htmlText)
-  //const tokens = tokenize(htmlText);
   return res;
 }
 
@@ -97,12 +96,15 @@ function stack(htmlText) {
   const res = [];
   for (const token of tokens) {
 
-    if (token.type === 'unknown') {
+    if (token.type === 'unknown' || token.type === 'doctype' || token.type === 'comment') {
       continue;
     }
     if (token.type === 'close') {
-      if (stack.length > 0 && stack[stack.length - 1].name === token.name) {
-        stack.pop();
+      for (let i = stack.length - 1; i >= 0; i--) {
+        if (stack[i].name === token.name) {
+          stack.length = i;
+          break;
+        }
       }
       continue;
     }
@@ -114,8 +116,6 @@ function stack(htmlText) {
 
       if (stack.length > 0) {
         stack[stack.length - 1].children.push(node)
-      } else {
-        res.push(node)
       }
       continue
     }
